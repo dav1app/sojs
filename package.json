@@ -1,0 +1,14 @@
+{
+  "name": "hardhat-project",
+  "scripts": {
+    "compile": "hardhat compile",
+    "local": "hardhat node",
+    "deploy": "hardhat run scripts/deploy.ts --network testnet",
+    "test": "hardhat test --network localhost"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "dotenv": "^16.3.1",
+    "hardhat": "^2.16.1"
+  }
+}

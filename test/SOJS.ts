@@ -144,16 +144,17 @@ describe("SOJS", function () {
     it("Should be able to suport mixed opeations and identifiers", async function () {
       const { contract } = await loadFixture(fixture);
       const dump = await contract.script(`
-        var a = 4  
-        var b = 6
+        var a = 8
+        a = 4  
+        var b = 6 + 2;
         var c = a + b + 6
       `);
 
       expect(dump).to.deep.equal([
         [ false, '', 0n ],
         [ true, 'a', 4n ],
-        [ true, 'b', 6n ],
-        [ true, 'c', 16n ],
+        [ true, 'b', 8n ],
+        [ true, 'c', 18n ],
       ]);
     })
   })

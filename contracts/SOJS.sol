@@ -74,17 +74,13 @@ contract SOJSLexer {
                  Pointer memory r;
 
                 if(fromLiteral[tkStr]._exists) {
-                    // is a reserved word
                      r = Pointer(fromLiteral[tkStr], "", 0);
                 } else {
-                    //is an identifier
                      r = Pointer(fromLiteral["id"], tkStr, 0);
                 }
 
                 stack[stackIndex] = r;
                 stackIndex++;
-
-            // if it is a number, it might be a Number or a Float
             } else if (isNumeric(currChar)) {
                 while (isNumeric(currChar)) {
                     currChar = getCharAtIndex(code, dataPos);
@@ -96,7 +92,6 @@ contract SOJSLexer {
                 Pointer memory r = Pointer(fromName["SOJS_INTEGER"], tkStr, stringToUint(tkStr));
                 stack[stackIndex] = r;
                 stackIndex++;
-
             } else {
                 Pointer memory r;
                 if(fromLiteral[bytes1ToString(currChar)]._exists) {
@@ -157,26 +152,15 @@ contract SOJSLexer {
                 
                 //detect expressions
                 
-
-                
                 require( 
                     currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
                     currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
                     string.concat("Expression expected. Got", rightHand._token._name)
                 ); 
 
-
                 uint256 memoryLocation = findMemorySpaceIndex(memorySpace, leftHand._identifier, 0);
 
                 require( memoryLocation != 0 , "Variable not defined");
-
-                // console.log("SOJS_ASSIGN", leftHand._identifier, rightHand._token._name, rightHand._value);
-
-                // memorySpace[memoryLocation] = Memory (
-                //     true,
-                //     leftHand._identifier,
-                //     rightHand._value
-                // );
                 
                 uint256 rightPadding = 1;
                 leftHand = stack[stackIndex - 1];
@@ -227,7 +211,6 @@ contract SOJSLexer {
                         );
 
                         stackIndex++;
-                        
                     } 
 
                     if(currentStackTokenIs(stack[paddedPointer], "SOJS_IDENTIFIER")) {
@@ -239,17 +222,13 @@ contract SOJSLexer {
                             string.concat("Expression expected. Got ", rightHand._token._name)
                         ); 
 
-                        
-
                         uint256 result = findInMemorySpace(memorySpace, stack[paddedPointer]._identifier)._value + rightHand._value;
                         memorySpace[memoryLocation] = Memory (
                             true,
                             leftHand._identifier,
                             result
                         );
-                        
-                    } 
-
+                    }
 
                     if(currentStackTokenIs(stack[paddedPointer], "SOJS_INTEGER")) {
                         console.log("EXP > SOJS_INTEGER", stack[paddedPointer]._value);
@@ -263,25 +242,19 @@ contract SOJSLexer {
                             leftHand._identifier,
                             rightHand._value
                         );
-                        
                     } 
-                    
-                   
                     rightPadding++;
-    
                 }
                 stackIndex++;
-                
             }
             stackIndex++;
             i++;
         }
 
         return memorySlice(memorySpace, memorySpaceFreeIndex);
-
     }
 
-    function currentStackTokenIs(Pointer memory pointer, string memory name) public view returns (bool) {
+    function currentStackTokenIs(Pointer memory pointer, string memory name) public pure returns (bool) {
         return comparteStrings(pointer._token._name, name);
     }
 
@@ -314,7 +287,6 @@ contract SOJSLexer {
 
         while (memorySpaceIndex < memorySpaceLength) {
             if(comparteStrings(memorySpace[memorySpaceIndex]._identifier, identifier)) {
-                
                 return memorySpace[memorySpaceIndex];
             }
             memorySpaceIndex++;
@@ -394,7 +366,6 @@ contract SOJSLexer {
             }
         }
     }
-
 
     function stringToBytes32(string memory input) public pure returns (bytes32) {
         require(bytes(input).length <= 32, "String too long");

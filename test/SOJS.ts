@@ -5,7 +5,6 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("SOJS", function () {
-
   async function fixture() {
     const Script = await ethers.getContractFactory("SOJSLexer");
     const contract = await Script.deploy({ gasLimit: '20000000' })
@@ -85,13 +84,11 @@ describe("SOJS", function () {
       const { contract } = await loadFixture(fixture);
       const dump = await contract.script(`
         var a = 4 + 2
-        var b = 6 + 4
       `);
 
       expect(dump).to.include.deep.members([
         [ false, '', 0n ],
         [ true, 'a', 6n ],
-        [ true, 'b', 10n ],
       ]);
     })
 
@@ -113,8 +110,8 @@ describe("SOJS", function () {
       const { contract } = await loadFixture(fixture);
       const dump = await contract.script(`
         var a = 4 + 2 + 6; 
-        var b = 6 + 4 + 2;
-        var c = 6 + 4 + 2 + 1;
+        var b = 6 + 4 + 2
+        var c = 6 + 4 + 2 + 1
         var d
         d = 6 + 4 + 2 + 1;
       `);
@@ -127,5 +124,24 @@ describe("SOJS", function () {
         [ true, 'd', 13n ],
       ]);
     })
+
+    it("Should be able to declare and assign to expression with more than 3 operations", async function () {
+      const { contract } = await loadFixture(fixture);
+      const dump = await contract.script(`
+        var a = 4  
+        var b = 6
+        var c = a + b
+      `);
+
+      expect(dump).to.deep.equal([
+        [ false, '', 0n ],
+        [ true, 'a', 4n ],
+        [ true, 'b', 6n ],
+        [ true, 'c', 10n ],
+      ]);
+    })
   })
+
+  describe("Lexer Only", function () {
+   //TODO: create lexer tests
 })

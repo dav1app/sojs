@@ -126,11 +126,14 @@ contract SOJSLexer {
 
         while (stackIndex < stackLength) {
             if(currentStackTokenIs(stack[stackIndex], "SOJS_EOF")){
+                console.log("SOJS_EOF");
                 break;
             }
 
             if(currentStackTokenIs(stack[stackIndex], "SOJS_VAR")) {
+                
                 Pointer memory nextStackItem = stack[stackIndex + 1];
+                console.log("DEC", nextStackItem._identifier);
                 require( currentStackTokenIs(nextStackItem, "SOJS_IDENTIFIER"), "Identifier expected.");  //mandatory identifier
                 
                 Memory memory currentVar = findInMemorySpace(memorySpace, nextStackItem._identifier);
@@ -146,43 +149,124 @@ contract SOJSLexer {
             }
 
             if(currentStackTokenIs(stack[stackIndex], "SOJS_ASSIGN")) {
+
                 Pointer memory leftHand = stack[stackIndex - 1];
                 Pointer memory rightHand = stack[stackIndex + 1];
+                console.log("ASN", leftHand._identifier);
                 require( currentStackTokenIs(leftHand, "SOJS_IDENTIFIER"), "Identifier expected.");  //mandatory identifier
-                require( currentStackTokenIs(rightHand, "SOJS_INTEGER"), "Integer expected.");  //mandatory number
+                
+                //detect expressions
+                
+
+                
+                require( 
+                    currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
+                    currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
+                    string.concat("Expression expected. Got", rightHand._token._name)
+                ); 
+
+
                 uint256 memoryLocation = findMemorySpaceIndex(memorySpace, leftHand._identifier, 0);
 
                 require( memoryLocation != 0 , "Variable not defined");
 
-                memorySpace[memoryLocation] = Memory (
-                    true,
-                    leftHand._identifier,
-                    rightHand._value
-                );
+                // console.log("SOJS_ASSIGN", leftHand._identifier, rightHand._token._name, rightHand._value);
+
+                // memorySpace[memoryLocation] = Memory (
+                //     true,
+                //     leftHand._identifier,
+                //     rightHand._value
+                // );
                 
-                uint256 rightPadding = 0;
+                uint256 rightPadding = 1;
+                leftHand = stack[stackIndex - 1];
                 while (true) {
                     uint256 paddedPointer = stackIndex + rightPadding;
+                    
+                    logCurrentMemory(memorySpace);
+
                     if (
                         currentStackTokenIs(stack[paddedPointer], "SOJS_SEMICOLON") || 
                         currentStackTokenIs(stack[paddedPointer], "SOJS_RETURN") ||
                         currentStackTokenIs(stack[paddedPointer], "SOJS_VAR") ||
                         currentStackTokenIs(stack[paddedPointer], "SOJS_EOF") 
                     ) {
+                        console.log(
+                            string.concat( 
+                                "EXP", ' ',
+                                leftHand._identifier, ' ',
+                                stack[stackIndex]._token._name, ' ',
+                                stack[paddedPointer]._token._name, ' ',
+                                "expression break"
+                            )
+                        );
                         break;
                     }   
-                    uint256 padding = stackIndex + rightPadding;
-                    if(currentStackTokenIs(stack[padding], "SOJS_SUMOPERATOR")) {
+
+                    if(currentStackTokenIs(stack[paddedPointer], "SOJS_SUMOPERATOR")) {
+                        rightHand = stack[paddedPointer + 1];
+                        console.log(rightHand._identifier, rightHand._value, rightHand._token._name);
+                        console.log("EXP > SOJS_SUMOPERATOR ID ", leftHand._identifier, rightHand._identifier);
+                        console.log("EXP > SOJS_SUMOPERATOR VAL", leftHand._value, rightHand._value);
+
+                        require( 
+                            currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
+                            currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
+                            string.concat("Expression expected. Got", rightHand._token._name)
+                        ); 
+
+                        uint256 leftHandValue = findValueInMemorySpace(memorySpace, leftHand);
+                        uint256 rightHandValue = findValueInMemorySpace(memorySpace, rightHand);
+
+                        uint256 result = leftHandValue + rightHandValue;
+                        console.log("EXP > SUM", leftHandValue, rightHandValue, result);
+                        memorySpace[memoryLocation] = Memory (
+                            true,
+                            leftHand._identifier,
+                            result
+                        );
+
                         stackIndex++;
-                        require( currentStackTokenIs(stack[padding + 1], "SOJS_INTEGER"), "Integer expected."); 
-                        uint256 result = memorySpace[memoryLocation]._value + stack[padding +1]._value;
+                        
+                    } 
+
+                    if(currentStackTokenIs(stack[paddedPointer], "SOJS_IDENTIFIER")) {
+                        console.log("EXP > SOJS_IDENTIFIER", stack[paddedPointer]._identifier);
+                        rightHand = stack[paddedPointer];
+                        require( 
+                            currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
+                            currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
+                            string.concat("Expression expected. Got ", rightHand._token._name)
+                        ); 
+
+                        
+
+                        uint256 result = findInMemorySpace(memorySpace, stack[paddedPointer]._identifier)._value + rightHand._value;
                         memorySpace[memoryLocation] = Memory (
                             true,
                             leftHand._identifier,
                             result
                         );
                         
-                    }
+                    } 
+
+
+                    if(currentStackTokenIs(stack[paddedPointer], "SOJS_INTEGER")) {
+                        console.log("EXP > SOJS_INTEGER", stack[paddedPointer]._value);
+                        require( 
+                            currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
+                            currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
+                            string.concat("Expression expected. Got ", rightHand._token._name)
+                        ); 
+                        memorySpace[memoryLocation] = Memory (
+                            true,
+                            leftHand._identifier,
+                            rightHand._value
+                        );
+                        
+                    } 
+                    
+                   
                     rightPadding++;
     
                 }
@@ -197,8 +281,31 @@ contract SOJSLexer {
 
     }
 
-    function currentStackTokenIs(Pointer memory pointer, string memory name) public pure returns (bool) {
+    function currentStackTokenIs(Pointer memory pointer, string memory name) public view returns (bool) {
         return comparteStrings(pointer._token._name, name);
+    }
+
+    function logCurrentMemory(Memory[] memory memorySpace) public view{
+        uint256 memorySpaceIndex = 1;
+        uint256 memorySpaceLength = memorySpace.length;
+
+        while (memorySpaceIndex < memorySpaceLength) {
+            console.log(
+                "MEM ",
+                memorySpaceIndex,
+                memorySpace[memorySpaceIndex]._identifier,
+                memorySpace[memorySpaceIndex]._value
+            );
+            memorySpaceIndex++;
+        }
+    }
+
+    function findValueInMemorySpace(Memory[] memory memorySpace, Pointer memory pointer) public pure returns (uint256) {
+        if(pointer._value != 0) {
+            return pointer._value;
+        }
+
+        return findInMemorySpace(memorySpace,pointer._identifier)._value;
     }
 
     function findInMemorySpace(Memory[] memory memorySpace, string memory identifier) public pure returns (Memory memory) {
@@ -207,6 +314,7 @@ contract SOJSLexer {
 
         while (memorySpaceIndex < memorySpaceLength) {
             if(comparteStrings(memorySpace[memorySpaceIndex]._identifier, identifier)) {
+                
                 return memorySpace[memorySpaceIndex];
             }
             memorySpaceIndex++;

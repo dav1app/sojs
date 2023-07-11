@@ -125,15 +125,12 @@ contract SOJSLexer {
         uint256 i = 0;
 
         while (stackIndex < stackLength) {
-            console.log("i", i, "stackIndex", stackIndex);
             if(currentStackTokenIs(stack[stackIndex], "SOJS_EOF")){
                 break;
             }
 
             if(currentStackTokenIs(stack[stackIndex], "SOJS_VAR")) {
-                console.log("SOJS_VAR");
                 Pointer memory nextStackItem = stack[stackIndex + 1];
-                console.log("nextStackItem", nextStackItem._identifier);
                 require( currentStackTokenIs(nextStackItem, "SOJS_IDENTIFIER"), "Identifier expected.");  //mandatory identifier
                 
                 Memory memory currentVar = findInMemorySpace(memorySpace, nextStackItem._identifier);
@@ -149,8 +146,6 @@ contract SOJSLexer {
             }
 
             if(currentStackTokenIs(stack[stackIndex], "SOJS_ASSIGN")) {
-                console.log("SOJS_ASSIGN");
-                console.log( stack[stackIndex - 1]._identifier);
                 Pointer memory leftHand = stack[stackIndex - 1];
                 Pointer memory rightHand = stack[stackIndex + 1];
                 require( currentStackTokenIs(leftHand, "SOJS_IDENTIFIER"), "Identifier expected.");  //mandatory identifier
@@ -166,7 +161,6 @@ contract SOJSLexer {
                 );
                 
                 uint256 rightPadding = 0;
-                console.log("stackIndex: %s", stackIndex);
                 while (true) {
                     uint256 paddedPointer = stackIndex + rightPadding;
                     if (
@@ -178,9 +172,7 @@ contract SOJSLexer {
                         break;
                     }   
                     uint256 padding = stackIndex + rightPadding;
-                    console.log("stackIndex: %s", stackIndex);
                     if(currentStackTokenIs(stack[padding], "SOJS_SUMOPERATOR")) {
-                        console.log('SOJS_SUMOPERATOR');
                         stackIndex++;
                         require( currentStackTokenIs(stack[padding + 1], "SOJS_INTEGER"), "Integer expected."); 
                         uint256 result = memorySpace[memoryLocation]._value + stack[padding +1]._value;

@@ -140,8 +140,25 @@ describe("SOJS", function () {
         [ true, 'c', 10n ],
       ]);
     })
+
+    it("Should be able to suport mixed opeations and identifiers", async function () {
+      const { contract } = await loadFixture(fixture);
+      const dump = await contract.script(`
+        var a = 4  
+        var b = 6
+        var c = a + b + 6
+      `);
+
+      expect(dump).to.deep.equal([
+        [ false, '', 0n ],
+        [ true, 'a', 4n ],
+        [ true, 'b', 6n ],
+        [ true, 'c', 16n ],
+      ]);
+    })
   })
 
   describe("Lexer Only", function () {
    //TODO: create lexer tests
+  })
 })

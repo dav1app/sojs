@@ -141,7 +141,7 @@ describe("SOJS", function () {
       ]);
     })
 
-    it("Should be able to suport mixed opeations and identifiers", async function () {
+    it("Should be able to suport multiple operators and identifiers", async function () {
       const { contract } = await loadFixture(fixture);
       const dump = await contract.script(`
         var a = 8
@@ -156,6 +156,55 @@ describe("SOJS", function () {
         [ true, 'b', 8n ],
         [ true, 'c', 18n ],
       ]);
+    })
+
+    it("Should be able to suport mixed opeations and identifiers", async function () {
+      const { contract } = await loadFixture(fixture);
+      const dump = await contract.script(`
+        var a = 8
+        a = 10  
+        var b = 6 ;
+        var c = a - b - 1 + 1
+      `);
+
+      expect(dump).to.deep.equal([
+        [ false, '', 0n ],
+        [ true, 'a', 10n ],
+        [ true, 'b', 6n ],
+        [ true, 'c', 4n ],
+      ]);
+    })
+
+    it("Should throw EOF", async function () {
+      const { contract } = await loadFixture(fixture);
+
+      await expect(contract.script(`
+        var a = 
+      `)).to.be.revertedWith("Uncaught SyntaxError: Unexpected token 'eof'");
+    })
+
+    it("Should throw Unexpected VAR", async function () {
+      const { contract } = await loadFixture(fixture);
+
+      await expect(contract.script(`
+        var a = var = b
+      `)).to.be.revertedWith("Uncaught SyntaxError: Unexpected token 'var'");
+    })
+
+    it("Should throw Unexpected semicolon", async function () {
+      const { contract } = await loadFixture(fixture);
+
+      await expect(contract.script(`
+        var a = ;
+      `)).to.be.revertedWith("Uncaught SyntaxError: Unexpected token ';'");
+    })
+
+    it("Should throw missing declaration", async function () {
+      const { contract } = await loadFixture(fixture);
+
+      await expect(contract.script(`
+        a + 1;
+      `)).to.be.revertedWith("Uncaught ReferenceError: 'a' is not defined");
     })
   })
 

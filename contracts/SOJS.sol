@@ -34,7 +34,12 @@ contract SOJSLexer {
         twm("SOJS_ASSIGN","=", 260);
         twm("SOJS_INTEGER","", 257);
         twm("SOJS_SEMICOLON",";", 59);
+        
         twm("SOJS_SUMOPERATOR","+", 43);
+        twm("SOJS_MINUSOPERATOR", "-",44);
+        twm("SOJS_MULTIPLIEROPERATOR", "*", 45);
+        twm("SOJS_DIVIDEROPERATOR", "/", 46);
+
         twm("SOJS_RETURN","return", 45);
     }
 
@@ -155,12 +160,12 @@ contract SOJSLexer {
                 require( 
                     currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
                     currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
-                    string.concat("Expression expected. Got", rightHand._token._name)
+                    string.concat("Uncaught SyntaxError: Unexpected token \'", rightHand._token._literal, "'")
                 ); 
 
                 uint256 memoryLocation = findMemorySpaceIndex(memorySpace, leftHand._identifier, 0);
 
-                require( memoryLocation != 0 , "Variable not defined");
+                require( memoryLocation != 0 , string.concat("Uncaught ReferenceError: '", leftHand._identifier,"' is not defined"));
                 
                 uint256 rightPadding = 1;
                 leftHand = stack[stackIndex - 1];
@@ -187,7 +192,9 @@ contract SOJSLexer {
                         break;
                     }   
 
-                    if(currentStackTokenIs(stack[paddedPointer], "SOJS_SUMOPERATOR")) {
+                    if(
+                        isOperator(stack[paddedPointer])
+                    ) {
                         rightHand = stack[paddedPointer + 1];
                         console.log(rightHand._identifier, rightHand._value, rightHand._token._name);
                         console.log("EXP > SOJS_SUMOPERATOR ID ", leftHand._identifier, rightHand._identifier);
@@ -196,14 +203,25 @@ contract SOJSLexer {
                         require( 
                             currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
                             currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
-                            string.concat("Expression expected. Got", rightHand._token._name)
+                            string.concat("Uncaught SyntaxError: Unexpected token '", rightHand._token._name, "'")
                         ); 
 
-                        uint256 leftHandValue = findValueInMemorySpace(memorySpace, leftHand);
-                        uint256 rightHandValue = findValueInMemorySpace(memorySpace, rightHand);
+                        uint256 l = findValueInMemorySpace(memorySpace, leftHand);
+                        uint256 r = findValueInMemorySpace(memorySpace, rightHand);
 
-                        uint256 result = leftHandValue + rightHandValue;
-                        console.log("EXP > SUM", leftHandValue, rightHandValue, result);
+                        uint256 result;
+
+                        if (currentStackTokenIs(stack[paddedPointer], "SOJS_SUMOPERATOR" )) {
+                            result = l + r;
+                        } else if (currentStackTokenIs(stack[paddedPointer],"SOJS_MINUSOPERATOR")){
+                            result = l - r;
+                        } else if (currentStackTokenIs(stack[paddedPointer], "SOJS_MULTIPLYOPERATOR")) {
+                            result = l * r;
+                        } else if (currentStackTokenIs(stack[paddedPointer], "SOJS_DIVISIONOPERATOR")) {
+                            result = l / r;
+                        } 
+
+                        console.log( string.concat("EXP > ",stack[paddedPointer]._token._name), l, r, result);
                         memorySpace[memoryLocation] = Memory (
                             true,
                             leftHand._identifier,
@@ -219,10 +237,12 @@ contract SOJSLexer {
                         require( 
                             currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
                             currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
-                            string.concat("Expression expected. Got ", rightHand._token._name)
+                            string.concat("Uncaught SyntaxError: Unexpected token '", rightHand._token._literal, "'")
                         ); 
 
-                        uint256 result = findInMemorySpace(memorySpace, stack[paddedPointer]._identifier)._value + rightHand._value;
+                        Memory memory declaration = findInMemorySpace(memorySpace, stack[paddedPointer]._identifier);
+                        //require(declaration._exists == false, string.concat("Uncaught ReferenceError: '", stack[paddedPointer]._identifier, "' is not defined"));
+                        uint256 result = declaration._value + rightHand._value;
                         memorySpace[memoryLocation] = Memory (
                             true,
                             leftHand._identifier,
@@ -235,7 +255,7 @@ contract SOJSLexer {
                         require( 
                             currentStackTokenIs(rightHand, "SOJS_INTEGER") ||
                             currentStackTokenIs(rightHand, "SOJS_IDENTIFIER"),
-                            string.concat("Expression expected. Got ", rightHand._token._name)
+                            string.concat("Uncaught SyntaxError: Unexpected token '", rightHand._token._literal, "'")
                         ); 
                         memorySpace[memoryLocation] = Memory (
                             true,
@@ -332,6 +352,19 @@ contract SOJSLexer {
 
     function isBreaker(bytes1 _char) public pure returns (bool) {
         return _char ==  bytes1(";") || isWhiteSpace(_char);
+    }
+
+    function isOperator(Pointer memory pointer) public pure returns (bool){
+        if (
+            currentStackTokenIs(pointer, "SOJS_SUMOPERATOR") ||
+            currentStackTokenIs(pointer, "SOJS_MINUSOPERATOR") || 
+            currentStackTokenIs(pointer, "SOJS_MULTIPLIEROPERATOR") ||
+            currentStackTokenIs(pointer, "SOJS_DIVIDEROPERATOR") 
+        ){ 
+            return true;
+        } else {
+            return false;
+        }
     }
 
     function getSubstring( string calldata input, uint start, uint end) internal pure returns (string memory) {
